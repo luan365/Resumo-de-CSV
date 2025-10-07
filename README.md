@@ -1,4 +1,4 @@
-Rodar localmente
+Rodar localmente 
 
 Requisitos: Node.js
 
