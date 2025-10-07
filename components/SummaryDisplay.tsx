@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface SummaryDisplayProps {
@@ -20,7 +19,9 @@ export const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ summary }) => {
   
   // Basic markdown to HTML conversion for display
   const formattedSummary = summary
-    .replace(/### (.*)/g, '<h3 class="text-2xl font-bold text-indigo-400 mt-6 mb-3">$1</h3>')
+    .replace(/^---$/gm, '<hr class="my-6 border-gray-700" />')
+    .replace(/#### (.*)/g, '<h4 class="text-xl font-bold text-gray-200 mb-2">$1</h4>')
+    .replace(/### (.*)/g, '<h3 class="text-2xl font-bold text-indigo-400 mb-3">$1</h3>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-gray-200">$1</strong>')
     .replace(/^- (.*)/gm, '<li class="ml-5 list-disc">$1</li>')
     .replace(/(\<li.*\<\/li\>)/g, '<ul class="space-y-2">$1</ul>')

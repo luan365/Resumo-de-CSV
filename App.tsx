@@ -1,31 +1,54 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import Papa, { ParseResult } from 'papaparse';
 import { generateColumnSummary } from './services/geminiService';
 import { FileUpload } from './components/FileUpload';
 import { SummaryDisplay } from './components/SummaryDisplay';
 import { Loader } from './components/Loader';
 import { ErrorMessage } from './components/ErrorMessage';
-import { ColumnInput } from './components/ColumnInput';
-import { ApiKeyInput } from './components/ApiKeyInput';
+import { ColumnInput, GroupingColumnInput } from './components/ColumnInput';
 import { Logo } from './components/Logo';
+import { ApiKeyInput } from './components/ApiKeyInput';
 
 const App: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [columnName, setColumnName] = useState<string>('Descrição');
-  const [apiKey, setApiKey] = useState<string>(localStorage.getItem('gemini-api-key') || '');
+  const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
+  const [columnName, setColumnName] = useState<string>('');
+  const [groupingColumnName, setGroupingColumnName] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('');
   const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem('gemini-api-key', apiKey);
-  }, [apiKey]);
 
   const handleFileChange = (selectedFile: File | null) => {
     setFile(selectedFile);
     setError(null);
     setSummary('');
+    setColumnHeaders([]);
+    setColumnName('');
+    setGroupingColumnName('');
+
+    if (selectedFile) {
+      Papa.parse(selectedFile, {
+        header: true,
+        skipEmptyLines: true,
+        preview: 1, // Only parse the first data row to get headers efficiently
+        complete: (results: ParseResult<Record<string, any>>) => {
+          const fields = results.meta.fields;
+          if (fields && fields.length > 0) {
+            setColumnHeaders(fields);
+            setColumnName(fields[0]); // Default to the first column
+          } else {
+            setError("Não foi possível encontrar um cabeçalho no arquivo CSV. Verifique se a primeira linha contém os nomes das colunas.");
+          }
+        },
+        error: (err: Error) => {
+          console.error('PapaParse header error:', err);
+          setError(`Falha ao ler o cabeçalho do arquivo CSV: ${err.message}`);
+        }
+      });
+    }
   };
+
 
   const handleGenerateSummary = useCallback(async () => {
     if (!file) {
@@ -63,17 +86,20 @@ const App: React.FC = () => {
             if (!fields || !fields.includes(columnName)) {
               throw new Error(`A coluna "${columnName}" não foi encontrada no arquivo CSV. Colunas disponíveis: ${fields?.join(', ') || 'Nenhuma'}`);
             }
-
-            const columnData = results.data
-              .map((row) => row[columnName])
-              .filter((value) => value !== null && value !== undefined && value.toString().trim() !== '');
-
-            if (columnData.length === 0) {
-              throw new Error(`A coluna "${columnName}" está vazia ou não contém dados válidos.`);
+             if (groupingColumnName && (!fields || !fields.includes(groupingColumnName))) {
+              throw new Error(`A coluna de agrupamento "${groupingColumnName}" não foi encontrada no arquivo CSV.`);
+            }
+            if (groupingColumnName && groupingColumnName === columnName) {
+              throw new Error('A coluna de análise e a coluna de agrupamento não podem ser a mesma.');
             }
 
-            const columnContent = columnData.join('\n');
-            const generatedSummary = await generateColumnSummary(columnContent, apiKey);
+            const generatedSummary = await generateColumnSummary(
+              apiKey,
+              columnName, 
+              groupingColumnName || null,
+              results.data
+            );
+
             setSummary(generatedSummary);
           } catch (err: any) {
             console.error(err);
@@ -93,7 +119,7 @@ const App: React.FC = () => {
       setError(err.message || 'Ocorreu um erro inesperado ao ler o arquivo.');
       setIsLoading(false);
     }
-  }, [file, columnName, apiKey]);
+  }, [file, columnName, groupingColumnName, apiKey]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 font-sans">
@@ -109,12 +135,23 @@ const App: React.FC = () => {
         <main className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
           <div className="space-y-6">
             <FileUpload onFileChange={handleFileChange} />
-            <ColumnInput value={columnName} onChange={setColumnName} />
+            <ColumnInput 
+              value={columnName} 
+              onChange={setColumnName}
+              headers={columnHeaders}
+              disabled={!file}
+            />
+            <GroupingColumnInput
+              value={groupingColumnName}
+              onChange={setGroupingColumnName}
+              headers={columnHeaders}
+              disabled={!file}
+            />
             <ApiKeyInput value={apiKey} onChange={setApiKey} />
             
             <button
               onClick={handleGenerateSummary}
-              disabled={isLoading || !file || !apiKey}
+              disabled={isLoading || !file || !columnName || !apiKey}
               className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 transition-all duration-300 ease-in-out disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center"
             >
               {isLoading ? (

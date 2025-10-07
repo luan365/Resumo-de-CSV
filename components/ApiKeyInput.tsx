@@ -9,7 +9,7 @@ export const ApiKeyInput: React.FC<ApiKeyInputProps> = ({ value, onChange }) => 
   return (
     <div>
       <label htmlFor="apiKey" className="block text-sm font-medium text-gray-300 mb-2">
-        3. Sua Chave de API do Gemini
+        4. Sua Chave de API do Gemini
       </label>
       <input
         type="password"
