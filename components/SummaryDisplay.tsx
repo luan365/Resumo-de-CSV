@@ -1,4 +1,5 @@
 import React from 'react';
+import Papa from 'papaparse';
 
 interface SummaryDisplayProps {
   summary: string;
@@ -6,40 +7,71 @@ interface SummaryDisplayProps {
 
 export const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ summary }) => {
   const downloadSummary = () => {
-    const blob = new Blob([summary], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([summary], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'resumo.txt';
+    link.download = 'resumo.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  
-  // Basic markdown to HTML conversion for display
-  const formattedSummary = summary
-    .replace(/^---$/gm, '<hr class="my-6 border-gray-700" />')
-    .replace(/#### (.*)/g, '<h4 class="text-xl font-bold text-gray-200 mb-2">$1</h4>')
-    .replace(/### (.*)/g, '<h3 class="text-2xl font-bold text-indigo-400 mb-3">$1</h3>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-gray-200">$1</strong>')
-    .replace(/^- (.*)/gm, '<li class="ml-5 list-disc">$1</li>')
-    .replace(/(\<li.*\<\/li\>)/g, '<ul class="space-y-2">$1</ul>')
-    .replace(/\n/g, '<br />');
 
+  const parsedData = Papa.parse(summary.trim(), { header: true, skipEmptyLines: true });
+  const headers = parsedData.meta.fields || [];
+  const rows: Record<string, string>[] = parsedData.data as Record<string, string>[];
+  
+  const hasContent = headers.length > 0 && rows.length > 0 && Object.values(rows[0]).some(val => val);
+
+  if (parsedData.errors.length > 0 || !hasContent) {
+      console.error("CSV Parsing errors:", parsedData.errors);
+      return (
+          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-700 animate-fade-in">
+              <h2 className="text-2xl font-bold text-white mb-4">Resumo da Análise</h2>
+              <p className="text-gray-400">Não foi possível exibir a prévia da análise. O conteúdo pode ser baixado.</p>
+               <button
+                    onClick={downloadSummary}
+                    className="mt-6 w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-500/50 transition-all duration-300 ease-in-out"
+                >
+                    Salvar Resumo em resumo.csv
+                </button>
+          </div>
+      );
+  }
 
   return (
     <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-700 animate-fade-in">
       <h2 className="text-2xl font-bold text-white mb-4">Resumo da Análise</h2>
-      <div 
-        className="prose prose-invert max-w-none text-gray-300 space-y-4"
-        dangerouslySetInnerHTML={{ __html: formattedSummary.replace(/<br \/>/g, '') }} 
-      />
+      <div className="overflow-x-auto rounded-lg border border-gray-700">
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead className="bg-gray-800/50">
+            <tr>
+              {headers.map((header) => (
+                <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="bg-gray-900/50 divide-y divide-gray-700">
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex} className="hover:bg-gray-800/60 transition-colors">
+                {headers.map((header) => (
+                  <td key={`${rowIndex}-${header}`} className="px-6 py-4 whitespace-pre-wrap text-sm text-gray-300 align-top">
+                    {row[header]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <button
         onClick={downloadSummary}
         className="mt-6 w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-500/50 transition-all duration-300 ease-in-out"
       >
-        Salvar Resumo em resumo.txt
+        Salvar Resumo em resumo.csv
       </button>
       <style>{`
         @keyframes fade-in {

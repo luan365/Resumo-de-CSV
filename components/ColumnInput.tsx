@@ -12,7 +12,7 @@ export const ColumnInput: React.FC<ColumnInputProps> = ({ value, onChange, heade
     return (
       <div>
         <label htmlFor="columnName" className="block text-sm font-medium text-gray-300 mb-2">
-          2. Selecione a Coluna para Análise
+          Passo 2: Selecione a Coluna para Análise
         </label>
         <div className="relative">
           <select
@@ -41,7 +41,7 @@ export const ColumnInput: React.FC<ColumnInputProps> = ({ value, onChange, heade
   return (
     <div>
       <label htmlFor="columnName" className="block text-sm font-medium text-gray-300 mb-2">
-        2. Nome da Coluna para Análise
+        Passo 2: Nome da Coluna para Análise
       </label>
       <input
         type="text"
@@ -57,25 +57,23 @@ export const ColumnInput: React.FC<ColumnInputProps> = ({ value, onChange, heade
 };
 
 export const GroupingColumnInput: React.FC<ColumnInputProps> = ({ value, onChange, headers, disabled }) => {
-  if (headers.length === 0) {
-    return null;
-  }
+  const hasHeaders = headers.length > 0;
   
   return (
     <div>
       <label htmlFor="groupingColumnName" className="block text-sm font-medium text-gray-300 mb-2">
-        3. Selecione a coluna de Área de Atuação (Opcional)
+        Passo 3: Selecione a coluna de Agrupamento (Opcional)
       </label>
       <div className="relative">
         <select
           id="groupingColumnName"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="w-full bg-gray-900/50 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+          disabled={disabled || !hasHeaders}
+          className="w-full bg-gray-900/50 border border-gray-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed"
         >
-          <option value="">Nenhum agrupamento</option>
-          {headers.map(header => (
+          <option value="">{hasHeaders ? 'Nenhum agrupamento' : 'Faça upload para ver as colunas'}</option>
+          {hasHeaders && headers.map(header => (
             <option key={header} value={header}>
               {header}
             </option>

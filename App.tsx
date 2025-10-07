@@ -10,11 +10,11 @@ import { Logo } from './components/Logo';
 import { ApiKeyInput } from './components/ApiKeyInput';
 
 const App: React.FC = () => {
+  const [apiKey, setApiKey] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
   const [columnName, setColumnName] = useState<string>('');
   const [groupingColumnName, setGroupingColumnName] = useState<string>('');
-  const [apiKey, setApiKey] = useState<string>('');
   const [summary, setSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,16 +51,16 @@ const App: React.FC = () => {
 
 
   const handleGenerateSummary = useCallback(async () => {
+    if (!apiKey.trim()) {
+      setError('Por favor, insira sua chave de API do Google Gemini.');
+      return;
+    }
     if (!file) {
       setError('Por favor, selecione um arquivo CSV primeiro.');
       return;
     }
     if (!columnName.trim()) {
       setError('Por favor, especifique o nome da coluna para analisar.');
-      return;
-    }
-    if (!apiKey.trim()) {
-      setError('Por favor, insira sua chave de API do Gemini.');
       return;
     }
 
@@ -119,7 +119,7 @@ const App: React.FC = () => {
       setError(err.message || 'Ocorreu um erro inesperado ao ler o arquivo.');
       setIsLoading(false);
     }
-  }, [file, columnName, groupingColumnName, apiKey]);
+  }, [apiKey, file, columnName, groupingColumnName]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 font-sans">
