@@ -172,7 +172,8 @@ const App: React.FC = () => {
         </main>
       </div>
        <footer className="text-center mt-8 text-gray-500 text-sm">
-          <p>Desenvolvido com React, Tailwind CSS e Gemini API.</p>
+          <p>Desenvolvido com React e Tailwind CSS</p>
+
         </footer>
     </div>
   );

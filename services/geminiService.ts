@@ -29,8 +29,8 @@ export const generateColumnSummary = async (
       3.  **Gerar Análise Estruturada:** Para cada grupo, crie uma análise concisa com as seguintes seções em markdown:
           -   **Pontos Positivos**: Liste os principais elogios ou temas positivos.
           -   **Pontos Negativos**: Liste os principais problemas ou temas negativos.
-          -   **Resumo**: Escreva um parágrafo curto que sintetize a análise do grupo.
-      4.  **Estrutura Final:** Apresente o resultado usando markdown, com um título para a análise geral e um subtítulo (nível 4, ####) para cada grupo, seguido pela análise estruturada.
+          -   **Resumo: **: Escreva um parágrafo curto que sintetize a análise do grupo.
+      4.  **Estrutura Final:** Apresente o resultado usando markdown, com um título para a análise geral e um subtítulo (nível 3, ####) para cada grupo, seguido pela análise estruturada.
       5.  **Separador:** Adicione uma linha horizontal em markdown ('---') entre a análise de cada grupo para uma clara separação visual.
 
       **Dados para Análise (amostra de até 200 linhas):**
@@ -49,7 +49,8 @@ export const generateColumnSummary = async (
       **Pontos Negativos**
       - Críticas sobre a comunicação interna e falta de transparência.
 
-      **Resumo**
+
+      **Resumo: **
       Neste grupo, a tecnologia é um ponto forte, mas a comunicação precisa de melhorias urgentes para aumentar a satisfação geral.
 
       ---
@@ -61,8 +62,9 @@ export const generateColumnSummary = async (
       **Pontos Negativos**
       - Processos lentos e infraestrutura limitada são as principais barreiras.
 
-      **Resumo**
-      Para este segmento, o desenvolvimento profissional é um atrativo que compensa parcialmente os problemas de infraestrutura e processos.
+
+      **Resumo: **
+      - Para este segmento, o desenvolvimento profissional é um atrativo que compensa parcialmente os problemas de infraestrutura e processos.
     `;
   } else {
     const columnData = data
@@ -80,13 +82,20 @@ export const generateColumnSummary = async (
 
       **Regras para a Geração da Análise:**
       1.  **Estrutura de Saída:** O resultado deve ser em markdown, dividido em três seções claras usando texto em negrito como título:
-          -   **Pontos Positivos**
-          -   **Pontos Negativos**
-          -   **Resumo**
+          
+      -   **Pontos Positivos**
+          
+      -   **Pontos Negativos**
+          
+      -   **Resumo: **
+
       2.  **Conteúdo:**
-          -   Em "Pontos Positivos", liste os principais temas e elogios recorrentes de forma curta e direta.
-          -   Em "Pontos Negativos", liste os principais problemas e críticas recorrentes de forma curta e direta.
-          -   Em "Resumo", escreva um parágrafo curto que sintetize a análise geral.
+          
+      -   Em "Pontos Positivos", liste os principais temas e elogios recorrentes de forma curta e direta.
+          
+      -   Em "Pontos Negativos", liste os principais problemas e críticas recorrentes de forma curta e direta.
+          
+      -   Em "Resumo: ", escreva um parágrafo curto que sintetize a análise geral.
       3.  **Concisão:** Mantenha a análise direta, objetiva e curta.
 
       **Conteúdo da Coluna para Análise (amostra de até 500 linhas):**
@@ -104,8 +113,8 @@ export const generateColumnSummary = async (
       - Comunicação interna deficiente e falta de transparência da gestão.
       - Infraestrutura limitada e processos lentos.
 
-      **Resumo**
-      A análise revela um forte contraste entre a satisfação com a remuneração e tecnologia e a insatisfação com a gestão e processos internos. Melhorar a comunicação e a infraestrutura são pontos-chave para o desenvolvimento.
+      **Resumo: **
+      - A análise revela um forte contraste entre a satisfação com a remuneração e tecnologia e a insatisfação com a gestão e processos internos. Melhorar a comunicação e a infraestrutura são pontos-chave para o desenvolvimento.
     `;
   }
 
