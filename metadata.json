@@ -1,0 +1,5 @@
+{
+  "name": "Analisador de CSV com IA",
+  "description": "Uma aplicação web que usa IA para analisar uma coluna de um arquivo CSV, identificar padrões e gerar um resumo.",
+  "requestFramePermissions": []
+}
