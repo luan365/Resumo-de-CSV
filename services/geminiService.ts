@@ -5,15 +5,16 @@ interface SummaryResult {
     csvSummary: string;
 }
 
-// FIX: Refactored function to remove the apiKey parameter. The key is now securely sourced from environment variables.
 export const generateColumnSummary = async (
-    analysisColumnName: string, 
-    groupingColumnName: string | null,
-    data: Record<string, any>[]
-): Promise<SummaryResult> => {
-  // FIX: Per @google/genai guidelines, the API key must be obtained from process.env.API_KEY.
-  // The '!' non-null assertion is used based on the guideline to assume the key is always available.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+analysisColumnName: string, groupingColumnName: string | null, data: Record<string, any>[], apiKey: any): Promise<SummaryResult> => {
+  const effectiveApiKey = apiKey ||
+    (typeof globalThis !== 'undefined' && (globalThis as any).process && (globalThis as any).process.env && (globalThis as any).process.env.API_KEY);
+
+  if (!effectiveApiKey) {
+    throw new Error('A chave de API não foi fornecida. Em desenvolvimento você pode enviar a chave via campo de API (inseguro) ou configurar um backend que armazene a chave em variáveis de ambiente.');
+  }
+
+  const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
 
   let prompt: string;
 
@@ -190,7 +191,6 @@ Logo após o separador, insira o conteúdo CSV da TAREFA 2.
 
   } catch (error) {
     console.error("Erro ao chamar a API do Gemini:", error);
-    // FIX: Updated error message to be more relevant now that the API key is handled by environment variables.
     throw new Error("Não foi possível gerar o resumo. Verifique a configuração da API e suas permissões de uso.");
   }
 };
