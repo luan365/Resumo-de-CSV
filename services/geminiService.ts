@@ -1,11 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
+interface SummaryResult {
+    textSummary: string;
+    csvSummary: string;
+}
+
 export const generateColumnSummary = async (
     apiKey: string,
     analysisColumnName: string, 
     groupingColumnName: string | null,
     data: Record<string, any>[]
-): Promise<string> => {
+): Promise<SummaryResult> => {
   if (!apiKey) {
     throw new Error("A chave da API do Gemini não foi fornecida.");
   }
@@ -21,30 +26,61 @@ export const generateColumnSummary = async (
     }));
 
     prompt = `
-      Você é um especialista em análise de dados. Sua tarefa é analisar a coluna "${analysisColumnName}", agrupando os resultados pela coluna "${groupingColumnName}", e gerar um arquivo CSV com a análise.
+Você é um especialista em análise de dados. Analise a coluna "${analysisColumnName}", agrupando os resultados pela coluna "${groupingColumnName}". Gere DOIS resultados: um resumo textual e um CSV.
 
-      **Sua tarefa é:**
-      1.  **Identificar Grupos:** Encontre todos os valores únicos na coluna de agrupamento ("${groupingColumnName}").
-      2.  **Análise por Grupo:** Para cada grupo, analise os dados correspondentes da coluna "${analysisColumnName}" e identifique pontos positivos, pontos negativos e um resumo.
-      3.  **Gerar Saída CSV:** Crie uma string no formato CSV, sem formatação extra. O CSV deve ter as seguintes colunas: "Grupo", "Tipo de Feedback", "Descrição".
-          -   A coluna "Grupo" conterá o valor da coluna de agrupamento ("${groupingColumnName}").
-          -   A coluna "Tipo de Feedback" conterá um dos seguintes valores: "Ponto Positivo", "Ponto Negativo", ou "Resumo".
-          -   A coluna "Descrição" conterá o texto da análise.
-      4.  **Estrutura do CSV:** A primeira linha DEVE ser o cabeçalho: "Grupo","Tipo de Feedback","Descrição". Use aspas duplas para todos os campos para garantir a compatibilidade.
+DADOS PARA ANÁLISE (amostra de até 200 linhas):
+---
+${JSON.stringify(relevantData, null, 2)}
+---
 
-      **Dados para Análise (amostra de até 200 linhas):**
-      ---
-      ${JSON.stringify(relevantData, null, 2)}
-      ---
+TAREFA 1: GERAR RESUMO TEXTUAL
+Analise os dados e, para cada grupo em "${groupingColumnName}", forneça um resumo claro e profissional. Se houver muitos grupos, concentre-se nos 3 com maior volume.
 
-      **Formato de Saída Esperado (APENAS A STRING CSV):**
-"Grupo","Tipo de Feedback","Descrição"
-"[Valor do Grupo 1]","Ponto Positivo","Elogios sobre a tecnologia utilizada e salários."
-"[Valor do Grupo 1]","Ponto Negativo","Críticas sobre a comunicação interna e falta de transparência."
-"[Valor do Grupo 1]","Resumo","Neste grupo, a tecnologia é um ponto forte, mas a comunicação precisa de melhorias urgentes para aumentar a satisfação geral."
-"[Valor do Grupo 2]","Ponto Positivo","Oportunidades de aprendizado são muito valorizadas."
-"[Valor do Grupo 2]","Ponto Negativo","Processos lentos e infraestrutura limitada são as principais barreiras."
-"[Valor do Grupo 2]","Resumo","Para este segmento, o desenvolvimento profissional é um atrativo que compensa parcialmente os problemas de infraestrutura e processos."
+REGRAS DE FORMATAÇÃO PARA O RESUMO:
+1. Título do grupo em maiúsculas, precedido por um emoji e envolto por hífens para destaque (exemplo: --- 🟦 MARKETING ---).
+2. Estrutura fixa para cada grupo:
+   - Pontos Positivos:
+     • [lista de aspectos positivos]
+   - Pontos Negativos:
+     • [lista de aspectos negativos]
+   - Resumo:
+     [texto resumindo as principais conclusões]
+3. Deixe uma linha em branco entre seções para melhor legibilidade.
+4. O estilo deve ser limpo, corporativo e fácil de ler, sem negrito, itálico ou outros símbolos de formatação.
+
+Exemplo de saída para múltiplos grupos:
+--- 🟦 MARKETING ---
+Pontos Positivos:
+• Benefícios atrativos e projetos inovadores.
+
+Pontos Negativos:
+• Comunicação interna deficiente e pouca clareza nas metas.
+
+Resumo:
+O setor de Marketing apresenta bons benefícios e inovação, mas enfrenta falhas na comunicação e nas metas.
+
+--- 🟩 TI ---
+Pontos Positivos:
+• Ambiente colaborativo e uso de tecnologias modernas.
+
+Pontos Negativos:
+• Carga horária elevada e falta de reconhecimento.
+
+Resumo:
+A TI é elogiada pelo ambiente e inovação, mas precisa equilibrar carga de trabalho e valorização.
+
+TAREFA 2: GERAR ARQUIVO CSV
+Crie uma string CSV simples com as colunas: "area de atuacao", "nome", "comentario", "elogio?".
+- area de atuacao: valor de "${groupingColumnName}".
+- nome: tema principal identificado (ex: "Salário", "Cultura", "Comunicação").
+- comentario: resumo conciso do feedback.
+- elogio?: "Sim" se positivo, "Não" se negativo.
+A primeira linha deve ser o cabeçalho e o CSV não pode ter formatação extra.
+
+FORMATO DE SAÍDA OBRIGATÓRIO:
+Primeiro, o resumo textual da TAREFA 1.
+Na linha seguinte, o separador exato: ---CSV_START---
+Depois, o conteúdo CSV da TAREFA 2.
     `;
   } else {
     const columnData = data
@@ -55,31 +91,54 @@ export const generateColumnSummary = async (
         throw new Error(`A coluna "${analysisColumnName}" está vazia ou não contém dados válidos.`);
     }
 
-    const columnContent = columnData.slice(0, 500).join('\n'); // Limit data to avoid overly long prompts
+    const columnContent = columnData.slice(0, 500).join('\n');
 
     prompt = `
-      Você é um especialista em análise de dados. Sua tarefa é analisar o conteúdo da coluna "${analysisColumnName}" de um arquivo CSV e gerar um arquivo CSV com a análise.
+Você é um especialista em análise de dados. Analise o conteúdo da coluna "${analysisColumnName}" e gere DOIS resultados: um resumo textual e um CSV.
 
-      **Regras para a Geração da Análise:**
-      1.  **Estrutura de Saída:** O resultado deve ser uma string no formato CSV, sem formatação extra. O CSV deve ter as seguintes colunas: "Tipo de Feedback", "Descrição".
-      2.  **Conteúdo:**
-          -   Crie linhas onde "Tipo de Feedback" seja "Ponto Positivo" para cada tema positivo identificado.
-          -   Crie linhas onde "Tipo de Feedback" seja "Ponto Negativo" para cada tema negativo identificado.
-          -   Crie uma linha final onde "Tipo de Feedback" seja "Resumo" com um parágrafo que sintetize a análise geral.
-      3.  **Formato CSV:** A primeira linha DEVE ser o cabeçalho: "Tipo de Feedback","Descrição". Use aspas duplas para todos os campos para garantir a compatibilidade.
+DADOS PARA ANÁLISE (amostra de até 500 linhas):
+---
+${columnContent}
+---
 
-      **Conteúdo da Coluna para Análise (amostra de até 500 linhas):**
-      ---
-      ${columnContent}
-      ---
+TAREFA 1: GERAR RESUMO TEXTUAL
+Analise o conteúdo e apresente um resumo claro e objetivo.
 
-      **Formato de Saída Esperado (APENAS A STRING CSV):**
-"Tipo de Feedback","Descrição"
-"Ponto Positivo","Uso de tecnologias modernas e salários competitivos."
-"Ponto Positivo","Boas oportunidades de aprendizado."
-"Ponto Negativo","Comunicação interna deficiente e falta de transparência da gestão."
-"Ponto Negativo","Infraestrutura limitada e processos lentos."
-"Resumo","A análise revela um forte contraste entre a satisfação com a remuneração e tecnologia e a insatisfação com a gestão e processos internos. Melhorar a comunicação e a infraestrutura são pontos-chave para o desenvolvimento."
+REGRAS DE FORMATAÇÃO:
+1. Comece com um título destacado: --- 📊 RESUMO GERAL DA ANÁLISE ---
+2. Estrutura:
+   - Pontos Positivos:
+     • [itens positivos]
+   - Pontos Negativos:
+     • [itens negativos]
+   - Resumo:
+     [síntese geral]
+3. Separe as seções com linhas em branco e sem formatações especiais (negrito, itálico, etc.).
+4. Estilo deve ser profissional, direto e bem espaçado.
+
+Exemplo:
+--- 📊 RESUMO GERAL DA ANÁLISE ---
+Pontos Positivos:
+• Feedbacks positivos sobre o ambiente e a gestão.
+
+Pontos Negativos:
+• Sugestões de melhoria nos salários e na comunicação.
+
+Resumo:
+A percepção geral é positiva, com oportunidades de melhoria em remuneração e comunicação.
+
+TAREFA 2: GERAR ARQUIVO CSV
+Crie uma string CSV com as colunas: "nome", "area de atuacao", "comentario", "elogio?".
+- nome: tema principal identificado.
+- area de atuacao: "Geral".
+- comentario: resumo conciso do feedback.
+- elogio?: "Sim" se positivo, "Não" se negativo.
+A primeira linha deve ser o cabeçalho.
+
+FORMATO DE SAÍDA OBRIGATÓRIO:
+Primeiro, o resumo textual da TAREFA 1.
+Na linha seguinte, o separador exato: ---CSV_START---
+Depois, o conteúdo CSV da TAREFA 2.
     `;
   }
 
@@ -89,9 +148,27 @@ export const generateColumnSummary = async (
         contents: prompt,
     });
     
-    return response.text;
+    const rawText = response.text;
+    const parts = rawText.split('---CSV_START---');
+    
+    const textSummary = (parts[0] || '').trim();
+    let csvSummary = (parts[1] || '').trim();
+    
+    const cleanCsvString = (text: string): string => {
+      const match = text.match(/```(?:csv\n)?([\s\S]*?)```/);
+      return match ? match[1].trim() : text.trim();
+    };
+
+    csvSummary = cleanCsvString(csvSummary);
+    
+    if (!textSummary && !csvSummary) {
+        throw new Error("A resposta da IA está vazia ou em um formato inesperado.");
+    }
+
+    return { textSummary, csvSummary };
+
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    console.error("Erro ao chamar a API do Gemini:", error);
     throw new Error("Não foi possível gerar o resumo. Verifique se sua chave de API está correta e tem permissões de uso.");
   }
 };

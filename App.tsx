@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import Papa, { ParseResult } from 'papaparse';
 import { generateColumnSummary } from './services/geminiService';
@@ -15,14 +16,16 @@ const App: React.FC = () => {
   const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
   const [columnName, setColumnName] = useState<string>('');
   const [groupingColumnName, setGroupingColumnName] = useState<string>('');
-  const [summary, setSummary] = useState<string>('');
+  const [textSummary, setTextSummary] = useState<string>('');
+  const [csvSummary, setCsvSummary] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (selectedFile: File | null) => {
     setFile(selectedFile);
     setError(null);
-    setSummary('');
+    setTextSummary('');
+    setCsvSummary('');
     setColumnHeaders([]);
     setColumnName('');
     setGroupingColumnName('');
@@ -66,7 +69,8 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    setSummary('');
+    setTextSummary('');
+    setCsvSummary('');
 
     try {
       const fileContent = await file.text();
@@ -93,14 +97,16 @@ const App: React.FC = () => {
               throw new Error('A coluna de análise e a coluna de agrupamento não podem ser a mesma.');
             }
 
-            const generatedSummary = await generateColumnSummary(
+            const { textSummary: newTextSummary, csvSummary: newCsvSummary } = await generateColumnSummary(
               apiKey,
               columnName, 
               groupingColumnName || null,
               results.data
             );
+            
+            setTextSummary(newTextSummary);
+            setCsvSummary(newCsvSummary);
 
-            setSummary(generatedSummary);
           } catch (err: any) {
             console.error(err);
             setError(err.message || 'Ocorreu um erro inesperado durante o processamento do CSV.');
@@ -167,7 +173,7 @@ const App: React.FC = () => {
 
           <div className="mt-8">
             {error && <ErrorMessage message={error} />}
-            {summary && !isLoading && <SummaryDisplay summary={summary} />}
+            {textSummary && !isLoading && <SummaryDisplay textSummary={textSummary} csvSummary={csvSummary} />}
           </div>
         </main>
       </div>
