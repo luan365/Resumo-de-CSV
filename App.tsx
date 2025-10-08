@@ -8,10 +8,10 @@ import { Loader } from './components/Loader';
 import { ErrorMessage } from './components/ErrorMessage';
 import { ColumnInput, GroupingColumnInput } from './components/ColumnInput';
 import { Logo } from './components/Logo';
-import { ApiKeyInput } from './components/ApiKeyInput';
+// FIX: Removed ApiKeyInput as per guidelines to use environment variables for the API key.
 
 const App: React.FC = () => {
-  const [apiKey, setApiKey] = useState<string>('');
+  // FIX: Removed apiKey state as it's no longer needed in the UI. The API key is now managed in the service layer.
   const [file, setFile] = useState<File | null>(null);
   const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
   const [columnName, setColumnName] = useState<string>('');
@@ -54,10 +54,7 @@ const App: React.FC = () => {
 
 
   const handleGenerateSummary = useCallback(async () => {
-    if (!apiKey.trim()) {
-      setError('Por favor, insira sua chave de API do Google Gemini.');
-      return;
-    }
+    // FIX: Removed manual API key check. The service now handles the key from environment variables.
     if (!file) {
       setError('Por favor, selecione um arquivo CSV primeiro.');
       return;
@@ -97,8 +94,8 @@ const App: React.FC = () => {
               throw new Error('A coluna de análise e a coluna de agrupamento não podem ser a mesma.');
             }
 
+            // FIX: Updated function call to remove apiKey argument.
             const { textSummary: newTextSummary, csvSummary: newCsvSummary } = await generateColumnSummary(
-              apiKey,
               columnName, 
               groupingColumnName || null,
               results.data
@@ -125,7 +122,8 @@ const App: React.FC = () => {
       setError(err.message || 'Ocorreu um erro inesperado ao ler o arquivo.');
       setIsLoading(false);
     }
-  }, [apiKey, file, columnName, groupingColumnName]);
+  // FIX: Removed apiKey from dependency array as it's no longer a state variable.
+  }, [file, columnName, groupingColumnName]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 font-sans">
@@ -153,11 +151,12 @@ const App: React.FC = () => {
               headers={columnHeaders}
               disabled={!file}
             />
-            <ApiKeyInput value={apiKey} onChange={setApiKey} />
+            {/* FIX: Removed ApiKeyInput component from rendering to align with security guidelines. */}
             
             <button
               onClick={handleGenerateSummary}
-              disabled={isLoading || !file || !columnName || !apiKey}
+              // FIX: Updated disabled condition to remove the apiKey check.
+              disabled={isLoading || !file || !columnName}
               className="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 transition-all duration-300 ease-in-out disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center"
             >
               {isLoading ? (

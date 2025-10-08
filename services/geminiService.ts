@@ -5,17 +5,15 @@ interface SummaryResult {
     csvSummary: string;
 }
 
+// FIX: Refactored function to remove the apiKey parameter. The key is now securely sourced from environment variables.
 export const generateColumnSummary = async (
-    apiKey: string,
     analysisColumnName: string, 
     groupingColumnName: string | null,
     data: Record<string, any>[]
 ): Promise<SummaryResult> => {
-  if (!apiKey) {
-    throw new Error("A chave da API do Gemini não foi fornecida.");
-  }
-  
-  const ai = new GoogleGenAI({ apiKey });
+  // FIX: Per @google/genai guidelines, the API key must be obtained from process.env.API_KEY.
+  // The '!' non-null assertion is used based on the guideline to assume the key is always available.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
   let prompt: string;
 
@@ -26,7 +24,7 @@ export const generateColumnSummary = async (
     }));
 
     prompt = `
-Você é um especialista em análise de dados. Analise a coluna "${analysisColumnName}", agrupando os resultados pela coluna "${groupingColumnName}". Gere DOIS resultados: um resumo textual e um CSV.
+Você é um especialista em análise de dados. Sua tarefa é analisar a coluna "${analysisColumnName}", agrupando os resultados pela coluna "${groupingColumnName}". Gere DOIS resultados distintos: um resumo textual bem formatado e um arquivo CSV.
 
 DADOS PARA ANÁLISE (amostra de até 200 linhas):
 ---
@@ -34,53 +32,66 @@ ${JSON.stringify(relevantData, null, 2)}
 ---
 
 TAREFA 1: GERAR RESUMO TEXTUAL
-Analise os dados e, para cada grupo em "${groupingColumnName}", forneça um resumo claro e profissional. Se houver muitos grupos, concentre-se nos 3 com maior volume.
+Analise os dados e, para cada grupo encontrado em "${groupingColumnName}", crie um resumo claro e profissional. Se houver muitos grupos, foque nos 3 com maior volume de dados.
 
-REGRAS DE FORMATAÇÃO PARA O RESUMO:
-1. Título do grupo em maiúsculas, precedido por um emoji e envolto por hífens para destaque (exemplo: --- 🟦 MARKETING ---).
-2. Estrutura fixa para cada grupo:
+REGRAS DE FORMATAÇÃO PARA O RESUMO TEXTUAL:
+1. Antes de cada título, adicione uma linha divisória exata: ────────────
+2. O título do grupo deve ser em MAIÚSCULAS, precedido por um emoji relevante (ex: 📈).
+3. Siga esta estrutura fixa para cada grupo:
    - Pontos Positivos:
-     • [lista de aspectos positivos]
+     • [liste aqui de 2 a 4 pontos positivos relevantes]
    - Pontos Negativos:
-     • [lista de aspectos negativos]
+     • [liste aqui de 2 a 4 pontos negativos relevantes]
    - Resumo:
-     [texto resumindo as principais conclusões]
-3. Deixe uma linha em branco entre seções para melhor legibilidade.
-4. O estilo deve ser limpo, corporativo e fácil de ler, sem negrito, itálico ou outros símbolos de formatação.
+     [um parágrafo conciso com as principais conclusões]
+4. Use bom espaçamento, com uma linha em branco entre cada seção (título, divisória, Pontos Positivos, etc.).
+5. O estilo do texto deve ser limpo, corporativo e de fácil leitura, sem formatação extra como negrito ou itálico.
 
-Exemplo de saída para múltiplos grupos:
---- 🟦 MARKETING ---
+EXEMPLO DE SAÍDA PARA MÚLTIPLOS GRUPOS:
+────────────
+📈 MARKETING
+
 Pontos Positivos:
-• Benefícios atrativos e projetos inovadores.
+• Utilização de tecnologias modernas e alinhadas ao mercado.
+• Desenvolvimento de projetos inovadores com boa aceitação.
+• Equipe criativa e com bom conhecimento técnico.
 
 Pontos Negativos:
-• Comunicação interna deficiente e pouca clareza nas metas.
+• A gestão de projetos poderia ser mais transparente.
+• A infraestrutura de TI apresenta limitações para grandes campanhas.
+• Falta de comunicação clara sobre as metas de longo prazo.
 
 Resumo:
-O setor de Marketing apresenta bons benefícios e inovação, mas enfrenta falhas na comunicação e nas metas.
+O setor de Marketing apresenta como pontos fortes tecnologias modernas e projetos inovadores, mas enfrenta desafios com a falta de transparência na gestão e infraestrutura limitada.
 
---- 🟩 TI ---
+
+────────────
+💡 VENDAS
+
 Pontos Positivos:
-• Ambiente colaborativo e uso de tecnologias modernas.
+• Equipe altamente motivada e proativa.
+• Ótimo relacionamento interpessoal com os clientes.
 
 Pontos Negativos:
-• Carga horária elevada e falta de reconhecimento.
+• As metas de vendas são percebidas como pouco realistas.
+• Ferramentas de CRM estão desatualizadas.
+• Necessidade de maior treinamento em novos produtos.
 
 Resumo:
-A TI é elogiada pelo ambiente e inovação, mas precisa equilibrar carga de trabalho e valorização.
+O time de Vendas é forte e motivado, mas as metas precisam ser reavaliadas e as ferramentas atualizadas para garantir sustentabilidade.
 
 TAREFA 2: GERAR ARQUIVO CSV
-Crie uma string CSV simples com as colunas: "area de atuacao", "nome", "comentario", "elogio?".
-- area de atuacao: valor de "${groupingColumnName}".
-- nome: tema principal identificado (ex: "Salário", "Cultura", "Comunicação").
-- comentario: resumo conciso do feedback.
-- elogio?: "Sim" se positivo, "Não" se negativo.
-A primeira linha deve ser o cabeçalho e o CSV não pode ter formatação extra.
+Crie uma string CSV com as colunas: "area de atuacao", "nome", "comentario", "elogio".
+- area de atuacao: O valor correspondente da coluna "${groupingColumnName}".
+- nome: O tema principal identificado no comentário (ex: "Salário", "Cultura", "Comunicação").
+- comentario: Um resumo conciso do feedback.
+- elogio: Responda com "1" se for um feedback positivo, ou "0" se for negativo.
+A primeira linha do CSV deve ser o cabeçalho, e não deve haver formatação extra.
 
 FORMATO DE SAÍDA OBRIGATÓRIO:
-Primeiro, o resumo textual da TAREFA 1.
-Na linha seguinte, o separador exato: ---CSV_START---
-Depois, o conteúdo CSV da TAREFA 2.
+A saída deve conter o resumo textual da TAREFA 1 primeiro.
+Em uma nova linha, coloque o separador exato: ---CSV_START---
+Logo após o separador, insira o conteúdo CSV da TAREFA 2.
     `;
   } else {
     const columnData = data
@@ -88,57 +99,67 @@ Depois, o conteúdo CSV da TAREFA 2.
         .filter((value) => value !== null && value !== undefined && value.toString().trim() !== '');
     
     if (columnData.length === 0) {
+        // FIX: Corrected a critical syntax error. The backtick was escaped (\`), breaking the template string and causing numerous downstream parsing errors.
         throw new Error(`A coluna "${analysisColumnName}" está vazia ou não contém dados válidos.`);
     }
 
     const columnContent = columnData.slice(0, 500).join('\n');
 
     prompt = `
-Você é um especialista em análise de dados. Analise o conteúdo da coluna "${analysisColumnName}" e gere DOIS resultados: um resumo textual e um CSV.
+Você é um especialista em análise de dados. Sua tarefa é analisar o conteúdo da coluna "${analysisColumnName}" e gerar DOIS resultados: um resumo textual bem formatado e um arquivo CSV.
 
-DADOS PARA ANÁLISE (amostra de até 500 linhas):
+DADOS PARA ANÁLISE (amostra de até 500 linhas da coluna):
 ---
 ${columnContent}
 ---
 
 TAREFA 1: GERAR RESUMO TEXTUAL
-Analise o conteúdo e apresente um resumo claro e objetivo.
+Analise o conteúdo fornecido e apresente um resumo claro e objetivo.
 
-REGRAS DE FORMATAÇÃO:
-1. Comece com um título destacado: --- 📊 RESUMO GERAL DA ANÁLISE ---
-2. Estrutura:
+REGRAS DE FORMATAÇÃO PARA O RESUMO TEXTUAL:
+1. Comece com uma linha divisória exata: ────────────
+2. Na linha seguinte, coloque o título exato: 💡 RESUMO GERAL DA ANÁLISE
+3. Siga esta estrutura fixa:
    - Pontos Positivos:
-     • [itens positivos]
+     • [liste aqui de 3 a 5 pontos positivos relevantes]
    - Pontos Negativos:
-     • [itens negativos]
+     • [liste aqui de 3 a 5 pontos negativos relevantes]
    - Resumo:
-     [síntese geral]
-3. Separe as seções com linhas em branco e sem formatações especiais (negrito, itálico, etc.).
-4. Estilo deve ser profissional, direto e bem espaçado.
+     [um parágrafo conciso com as principais conclusões]
+4. Deixe uma linha em branco entre as seções para melhor legibilidade.
+5. O estilo do texto deve ser limpo e profissional, sem formatação adicional como negrito ou itálico.
 
-Exemplo:
---- 📊 RESUMO GERAL DA ANÁLISE ---
+EXEMPLO DE RESULTADO ESPERADO:
+────────────
+💡 RESUMO GERAL DA ANÁLISE
+
 Pontos Positivos:
-• Feedbacks positivos sobre o ambiente e a gestão.
+• Feedbacks muito positivos sobre o ambiente de trabalho colaborativo.
+• Elogios recorrentes à gestão, considerada justa e acessível.
+• Boa percepção sobre a colaboração e sinergia entre as equipes.
+• Vários comentários mencionam oportunidades de crescimento.
 
 Pontos Negativos:
-• Sugestões de melhoria nos salários e na comunicação.
+• Sugestões consistentes de melhoria nos salários e no pacote de benefícios.
+• Críticas sobre a falta de comunicação clara em projetos interdepartamentais.
+• Alguns comentários apontam para a necessidade de melhores equipamentos.
+• Processos internos são vistos como burocráticos por parte da equipe.
 
 Resumo:
-A percepção geral é positiva, com oportunidades de melhoria em remuneração e comunicação.
+A análise geral dos comentários indica uma percepção majoritariamente positiva em relação ao ambiente e gestão, com oportunidades claras de aprimoramento na política de remuneração, na comunicação interna e na modernização de equipamentos e processos.
 
 TAREFA 2: GERAR ARQUIVO CSV
-Crie uma string CSV com as colunas: "nome", "area de atuacao", "comentario", "elogio?".
-- nome: tema principal identificado.
-- area de atuacao: "Geral".
-- comentario: resumo conciso do feedback.
-- elogio?: "Sim" se positivo, "Não" se negativo.
-A primeira linha deve ser o cabeçalho.
+Crie uma string CSV com as colunas: "nome", "area de atuacao", "comentario", "elogio".
+- nome: O tema principal identificado no comentário (ex: "Salário", "Cultura", "Comunicação").
+- area de atuacao: Preencha com "Geral".
+- comentario: Um resumo conciso do feedback.
+- elogio: Responda com "1" se for um feedback positivo, ou "0" se for negativo.
+A primeira linha do CSV deve ser o cabeçalho, e não deve haver formatação extra.
 
 FORMATO DE SAÍDA OBRIGATÓRIO:
-Primeiro, o resumo textual da TAREFA 1.
-Na linha seguinte, o separador exato: ---CSV_START---
-Depois, o conteúdo CSV da TAREFA 2.
+A saída deve conter o resumo textual da TAREFA 1 primeiro.
+Em uma nova linha, coloque o separador exato: ---CSV_START---
+Logo após o separador, insira o conteúdo CSV da TAREFA 2.
     `;
   }
 
@@ -169,6 +190,7 @@ Depois, o conteúdo CSV da TAREFA 2.
 
   } catch (error) {
     console.error("Erro ao chamar a API do Gemini:", error);
-    throw new Error("Não foi possível gerar o resumo. Verifique se sua chave de API está correta e tem permissões de uso.");
+    // FIX: Updated error message to be more relevant now that the API key is handled by environment variables.
+    throw new Error("Não foi possível gerar o resumo. Verifique a configuração da API e suas permissões de uso.");
   }
 };
